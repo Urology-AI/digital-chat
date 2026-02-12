@@ -1,5 +1,8 @@
+const HARDCODED_RENDER_BACKEND = "https://digital-chat.onrender.com";
 const rawApiBase = (import.meta.env.VITE_API_BASE_URL || "").trim();
-const API_BASE_URL = rawApiBase.replace(/\/+$/, "");
+const API_BASE_URL = (
+  rawApiBase || (import.meta.env.PROD ? HARDCODED_RENDER_BACKEND : "")
+).replace(/\/+$/, "");
 
 export function buildApiUrl(path: string): string {
   if (!path.startsWith("/")) {
