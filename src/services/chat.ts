@@ -1,7 +1,7 @@
 /**
  * Chat API service - session-based with history.
  */
-import { buildApiUrl, buildMediaUrl } from "./api";
+import { buildApiUrl, buildSpeechApiUrl, buildMediaUrl } from "./api";
 
 export interface Message {
   role: "user" | "assistant";
@@ -78,7 +78,8 @@ export async function sendSpeech(
   text: string,
   sessionId?: string
 ): Promise<SpeechResponse> {
-  const res = await fetch(buildApiUrl("/api/speech"), {
+  // Use separate speech server if configured, otherwise fall back to main API
+  const res = await fetch(buildSpeechApiUrl("/api/speech"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, session_id: sessionId ?? null }),

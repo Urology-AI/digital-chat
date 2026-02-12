@@ -32,6 +32,13 @@ A research prototype for patient education and emotional support. **Non-diagnost
    CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
    ```
 
+   **Frontend environment variables** (create `.env.local` or set in GitHub Actions):
+   ```
+   VITE_API_BASE_URL=http://localhost:8888          # Main API server (chat, settings, etc.)
+   VITE_SPEECH_API_BASE_URL=http://localhost:8889   # Optional: Separate speech server
+   ```
+   If `VITE_SPEECH_API_BASE_URL` is not set, speech requests will use the main API server.
+
 ## Run
 
 **Option A** – Run both (backend + frontend):
@@ -48,8 +55,15 @@ npm run backend
 npm run dev
 ```
 
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:5173 (with **Hot Module Replacement** - updates automatically on file changes)
 - Backend API: http://localhost:8000
+
+**Hot Reload**: The frontend automatically updates when you save changes to any `.tsx`, `.ts`, `.css`, or other source files. No need to manually refresh the browser!
+
+**Watch Mode**: For production builds that auto-rebuild on changes:
+```bash
+npm run build:watch
+```
 
 ## Deploy (GitHub Pages + Render)
 

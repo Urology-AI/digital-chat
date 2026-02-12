@@ -33,6 +33,7 @@ jobs:
       - name: Build frontend
         env:
           VITE_API_BASE_URL: https://digital-chat.onrender.com
+          VITE_SPEECH_API_BASE_URL: ${{ secrets.VITE_SPEECH_API_BASE_URL || 'https://digital-chat.onrender.com' }}
         run: npm run build -- --base="/${{ github.event.repository.name }}/"
 
       - name: Configure GitHub Pages
