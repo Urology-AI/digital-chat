@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TalkingAvatar } from "./components/TalkingAvatar";
 import { ChatInput } from "./components/ChatInput";
+import { DirectTTS } from "./components/DirectTTS";
 import { MessageList } from "./components/MessageList";
 import { Settings } from "./components/Settings";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
@@ -11,6 +12,8 @@ import type { ClinicianConfig } from "./config/clinician";
 import type { Message } from "./services/chat";
 
 const SESSION_KEY = "chat_session_id";
+
+type AppMode = "chat" | "tts";
 
 const DISCLAIMER =
   "This tool provides educational information and emotional support. It does not provide medical advice.";
@@ -25,11 +28,13 @@ function resolveAvatarUrl(rawUrl?: string): string {
 }
 
 function App() {
+  const [mode, setMode] = useState<AppMode>("chat");
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [config, setConfig] = useState<ClinicianConfig | null>(null);
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTTSGenerating, setIsTTSGenerating] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -168,6 +173,31 @@ function App() {
     setMessages([]);
   };
 
+  const handleDirectTTS = async (text: string) => {
+    if (!text.trim()) return;
+    setIsTTSGenerating(true);
+    try {
+      const currentSessionId = sessionId ?? (await createSession());
+      if (!sessionId) {
+        setSessionId(currentSessionId);
+        sessionStorage.setItem(SESSION_KEY, currentSessionId);
+      }
+      const speech = await sendSpeech(text, currentSessionId);
+      if (speech.audio_url) {
+        playAudioUrl(speech.audio_url);
+      } else {
+        // Fallback to browser TTS if backend TTS fails
+        speak(text);
+      }
+    } catch (error) {
+      console.error("TTS generation failed:", error);
+      // Fallback to browser TTS
+      speak(text);
+    } finally {
+      setIsTTSGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col relative overflow-hidden">
       {/* Immersive dark gradient background */}
@@ -207,12 +237,36 @@ function App() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleNewChat}
-            className="px-3 py-1.5 rounded-lg text-sm text-white/70 hover:text-white hover:bg-white/10 transition-all"
-          >
-            New chat
-          </button>
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+            <button
+              onClick={() => setMode("chat")}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                mode === "chat"
+                  ? "bg-sinai-400 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              onClick={() => setMode("tts")}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                mode === "tts"
+                  ? "bg-sinai-400 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              Direct TTS
+            </button>
+          </div>
+          {mode === "chat" && (
+            <button
+              onClick={handleNewChat}
+              className="px-3 py-1.5 rounded-lg text-sm text-white/70 hover:text-white hover:bg-white/10 transition-all"
+            >
+              New chat
+            </button>
+          )}
           <button
             onClick={() => setSettingsOpen(true)}
             className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
@@ -251,20 +305,45 @@ function App() {
         {/* Floating chat panel - glass morphism */}
         <section className="lg:w-[420px] shrink-0 flex flex-col">
           <div className="lg:fixed lg:right-6 lg:top-24 lg:bottom-24 lg:w-[380px] flex flex-col h-[320px] lg:h-auto lg:max-h-[calc(100vh-12rem)] rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-4 min-h-0">
-              <MessageList
-                messages={messages}
-                isLoading={isLoading}
-                onSpeak={handleSpeakMessage}
-              />
-            </div>
-            <div className="p-4 border-t border-white/10 bg-white/5">
-              <ChatInput
-                onAsk={handleAsk}
-                disabled={isLoading}
-                placeholder="Ask a question..."
-              />
-            </div>
+            {mode === "chat" ? (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  <MessageList
+                    messages={messages}
+                    isLoading={isLoading}
+                    onSpeak={handleSpeakMessage}
+                  />
+                </div>
+                <div className="p-4 border-t border-white/10 bg-white/5">
+                  <ChatInput
+                    onAsk={handleAsk}
+                    disabled={isLoading}
+                    placeholder="Ask a question..."
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 min-h-0 flex items-center justify-center">
+                  <div className="text-center text-white/50 text-sm px-4">
+                    <p className="mb-2">
+                      <svg className="w-12 h-12 mx-auto mb-3 text-sinai-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
+                    </p>
+                    <p className="text-white/70 font-medium mb-1">Direct Text-to-Speech</p>
+                    <p className="text-white/40 text-xs">
+                      Enter any text below to convert it to speech instantly.
+                    </p>
+                  </div>
+                </div>
+                <DirectTTS
+                  onGenerate={handleDirectTTS}
+                  disabled={false}
+                  isLoading={isTTSGenerating}
+                />
+              </>
+            )}
           </div>
         </section>
       </main>
