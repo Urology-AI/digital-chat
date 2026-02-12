@@ -35,9 +35,21 @@ export interface SettingsUpdate {
   };
 }
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const bodyText = await res.text();
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${bodyText.slice(0, 200)}`);
+  }
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error(`Expected JSON response, got: ${bodyText.slice(0, 120)}`);
+  }
+}
+
 export async function getSettings(): Promise<Settings> {
   const res = await fetch(buildApiUrl("/api/settings"));
-  return res.json();
+  return parseJsonResponse<Settings>(res);
 }
 
 export async function updateSettings(update: SettingsUpdate): Promise<Settings> {
@@ -46,10 +58,10 @@ export async function updateSettings(update: SettingsUpdate): Promise<Settings> 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(update),
   });
-  return res.json();
+  return parseJsonResponse<Settings>(res);
 }
 
 export async function getPresets(): Promise<PresetsResponse> {
   const res = await fetch(buildApiUrl("/api/prompts/presets"));
-  return res.json();
+  return parseJsonResponse<PresetsResponse>(res);
 }

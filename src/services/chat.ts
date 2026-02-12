@@ -29,9 +29,21 @@ export interface HistoryResponse {
   messages: Message[];
 }
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const bodyText = await res.text();
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${bodyText.slice(0, 200)}`);
+  }
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error(`Expected JSON response, got: ${bodyText.slice(0, 120)}`);
+  }
+}
+
 export async function createSession(): Promise<string> {
   const res = await fetch(buildApiUrl("/api/chat/sessions"), { method: "POST" });
-  const data = await res.json();
+  const data = await parseJsonResponse<{ session_id: string }>(res);
   return data.session_id;
 }
 
@@ -39,7 +51,7 @@ export async function getHistory(sessionId: string): Promise<HistoryResponse> {
   const res = await fetch(
     buildApiUrl(`/api/chat/history?session_id=${encodeURIComponent(sessionId)}`)
   );
-  const data = await res.json();
+  const data = await parseJsonResponse<HistoryResponse>(res);
   return {
     ...data,
     messages: (data.messages || []).map((m: Message) => ({
@@ -58,7 +70,7 @@ export async function sendMessage(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, session_id: sessionId ?? null }),
   });
-  const data = await res.json();
+  const data = await parseJsonResponse<ChatResponse>(res);
   return { ...data, audio_url: buildMediaUrl(data.audio_url) };
 }
 
@@ -71,6 +83,6 @@ export async function sendSpeech(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, session_id: sessionId ?? null }),
   });
-  const data = await res.json();
+  const data = await parseJsonResponse<SpeechResponse>(res);
   return { ...data, audio_url: buildMediaUrl(data.audio_url) };
 }

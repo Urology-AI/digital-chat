@@ -6,7 +6,7 @@ import { Settings } from "./components/Settings";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
 import { createSession, getHistory, sendMessage, sendSpeech } from "./services/chat";
 import { getSettings, type Settings as AppSettings } from "./services/settings";
-import { buildApiUrl } from "./services/api";
+import { buildApiUrl, buildMediaUrl } from "./services/api";
 import type { ClinicianConfig } from "./config/clinician";
 import type { Message } from "./services/chat";
 
@@ -14,6 +14,15 @@ const SESSION_KEY = "chat_session_id";
 
 const DISCLAIMER =
   "This tool provides educational information and emotional support. It does not provide medical advice.";
+
+function resolveAvatarUrl(rawUrl?: string): string {
+  const fallback = `${import.meta.env.BASE_URL}drtewari.png`;
+  if (!rawUrl) return fallback;
+  if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) return rawUrl;
+  if (rawUrl.startsWith("/media/")) return buildMediaUrl(rawUrl) ?? fallback;
+  if (rawUrl.startsWith("/")) return `${import.meta.env.BASE_URL}${rawUrl.slice(1)}`;
+  return `${import.meta.env.BASE_URL}${rawUrl}`;
+}
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -232,7 +241,7 @@ function App() {
               }}
             />
             <TalkingAvatar
-              imageUrl={config?.avatar_image_url ?? "/drtewari.png"}
+              imageUrl={resolveAvatarUrl(config?.avatar_image_url)}
               name={config?.clinician_name ?? "Dr Ash Tewari"}
               isSpeaking={isAvatarSpeaking}
             />
