@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sinai-bg: #0a0a1a;
+  --sinai-text: #f0f4f8;
+  --sinai-accent: #00AEEF;
+  --sinai-magenta: #DC298D;
+  --sinai-violet: #212070;
+}
+
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  background: var(--sinai-bg);
+  color: var(--sinai-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
