@@ -7,9 +7,7 @@ import {
   type PresetsResponse,
 } from "../services/settings";
 import {
-  getCurrentApiBaseUrl,
   getCurrentSpeechApiBaseUrl,
-  setApiBaseUrl,
   setSpeechApiBaseUrl,
 } from "../services/api";
 
@@ -48,7 +46,6 @@ export function Settings({ isOpen, onClose, onUpdated }: SettingsProps) {
   const [presets, setPresets] = useState<PresetsResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [apiBaseUrl, setApiBaseUrlState] = useState<string>("");
   const [speechApiBaseUrl, setSpeechApiBaseUrlState] = useState<string>("");
 
   useEffect(() => {
@@ -57,8 +54,6 @@ export function Settings({ isOpen, onClose, onUpdated }: SettingsProps) {
         .then((s) => setSettings(withVoiceDefaults(s)))
         .catch(() => setSettings(null));
       getPresets().then(setPresets).catch(() => setPresets(null));
-      // Load current API URLs from localStorage
-      setApiBaseUrlState(getCurrentApiBaseUrl());
       setSpeechApiBaseUrlState(getCurrentSpeechApiBaseUrl());
     }
   }, [isOpen]);
@@ -85,8 +80,12 @@ export function Settings({ isOpen, onClose, onUpdated }: SettingsProps) {
     if (!settings) return;
     setSaving(true);
     setMessage(null);
+
+    // Save speech API URL so generate-speech requests use it after reload
+    setSpeechApiBaseUrl(speechApiBaseUrl);
+
     try {
-      // Save backend settings
+      // Then try to save backend settings (uses current API URL until reload)
       const updated = await updateSettings({
         system_prompt: settings.system_prompt,
         model: settings.model,
@@ -96,23 +95,15 @@ export function Settings({ isOpen, onClose, onUpdated }: SettingsProps) {
       });
       const next = withVoiceDefaults(updated);
       setSettings(next);
-      
-      // Save API URLs to localStorage
-      setApiBaseUrl(apiBaseUrl);
-      setSpeechApiBaseUrl(speechApiBaseUrl);
-      
       onUpdated?.(next);
-      setMessage("Settings saved. API URLs updated - page will reload to apply changes.");
-      
-      // Reload page after a short delay to apply new API URLs
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      setMessage("Settings saved. Reloading to apply speech API…");
     } catch {
-      setMessage("Failed to save.");
-    } finally {
-      setSaving(false);
+      setMessage("Speech API URL saved. Backend settings could not be updated. Reloading…");
     }
+
+    setSaving(false);
+    // Always reload so new API URLs from localStorage take effect
+    setTimeout(() => window.location.reload(), 800);
   };
 
   if (!isOpen) return null;
@@ -225,42 +216,25 @@ export function Settings({ isOpen, onClose, onUpdated }: SettingsProps) {
             </div>
           </div>
 
-          {/* API Configuration */}
+          {/* Speech API (generate speech / TTS only) */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4">
-            <h3 className="text-sm font-medium text-white/90">API Configuration</h3>
+            <h3 className="text-sm font-medium text-white/90">Speech API (generate speech)</h3>
             <p className="text-xs text-white/50">
-              Configure API endpoints. Changes take effect after saving and reloading.
+              URL of the server used for text-to-speech. Chat and settings always use the main API.
             </p>
-            
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                Main API Base URL
-              </label>
-              <input
-                type="text"
-                value={apiBaseUrl}
-                onChange={(e) => setApiBaseUrlState(e.target.value)}
-                placeholder="https://digital-chat.onrender.com"
-                className="w-full px-4 py-3 rounded-xl border border-white/20 bg-white/5 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sinai-400/50 focus:border-sinai-400/50"
-              />
-              <p className="mt-1 text-xs text-white/50">
-                Base URL for chat, settings, and other API endpoints
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
-                Speech API Base URL (optional)
+                Speech API Base URL
               </label>
               <input
                 type="text"
                 value={speechApiBaseUrl}
                 onChange={(e) => setSpeechApiBaseUrlState(e.target.value)}
-                placeholder="Leave empty to use main API URL"
+                placeholder="Leave empty to use main API for speech too"
                 className="w-full px-4 py-3 rounded-xl border border-white/20 bg-white/5 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-sinai-400/50 focus:border-sinai-400/50"
               />
               <p className="mt-1 text-xs text-white/50">
-                Separate server for speech/TTS endpoints. If empty, uses main API URL.
+                Only /api/speech and generated audio use this. Save and reload to apply.
               </p>
             </div>
           </div>
