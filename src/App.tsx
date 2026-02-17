@@ -39,7 +39,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { speak, isSpeaking } = useTextToSpeech();
-  const isAvatarSpeaking = isSpeaking || isAudioPlaying;
+  const isAvatarSpeaking = isSpeaking || isAudioPlaying || isTTSGenerating;
 
   useEffect(() => {
     fetch(buildApiUrl("/api/config"))
@@ -341,6 +341,8 @@ function App() {
                   onGenerate={handleDirectTTS}
                   disabled={false}
                   isLoading={isTTSGenerating}
+                  useStreaming={true}
+                  sessionId={sessionId ?? undefined}
                 />
               </>
             )}

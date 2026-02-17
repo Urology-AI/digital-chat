@@ -111,7 +111,8 @@ If your repo name is different, replace `/digital-avatar/` with your repo path.
 | POST | `/api/chat/sessions` | Create new chat session |
 | GET | `/api/chat/history?session_id=` | Get chat history for session |
 | POST | `/api/chat` | Send message, get response (body: `{ message, session_id? }`) |
-| POST | `/api/speech` | Generate speech audio (body: `{ text, session_id?, speaker_id?, language? }`) |
+| POST | `/api/speech` | Generate speech audio (body: `{ text, session_id?, speaker_id?, language? }`) - returns audio URL |
+| POST | `/api/speech/stream` | **Stream TTS audio in real-time** (body: `{ text, session_id?, speaker_id?, language? }`) - streams MP3 chunks as they're generated |
 | POST | `/api/avatar/video` | Optional: SadTalker lip-sync video (body: `{ text }`) – requires `REPLICATE_API_TOKEN` |
 
 ## Avatar (LiteAvatar / OpenAvatar style)
@@ -130,8 +131,9 @@ If your repo name is different, replace `/digital-avatar/` with your repo path.
   - Model name, temperature, max tokens
   - Persisted to `data/settings.json`
 - Text-based patient questions → educational responses
-- Text-to-speech output (browser Web Speech API)
-- **Photo-based talking avatar** – Dr Tewari's photo with animated mouth overlay when speaking
+- **Real-time streaming TTS** – `/api/speech/stream` streams audio chunks as they're generated (no waiting for full file)
+- Text-to-speech output (browser Web Speech API fallback)
+- **Photo-based talking avatar** – Dr Tewari's photo with animated glow when speaking
 - Safety guardrails: no diagnosis, no medications, no emergencies
 - Scope classification with refusal + escalation language
 - Swappable clinician config for other specialties

@@ -15,12 +15,15 @@ except ImportError:
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+import json
 
 from backend.chat import get_chat_response
 from backend.config import CLINICIAN
 from backend.settings import get_settings, update_settings, get_presets
 from backend.services.voice import generate_response_audio
+from backend.services.voice_stream import stream_speech_audio_chunked
 from backend.store import (
     create_session,
     get_history,
@@ -238,6 +241,7 @@ def _synthesize_for_session(
 def generate_speech(http_request: Request, request: SpeechRequest):
     """
     Generate speech audio for text and return audio_url.
+    (Non-streaming - generates full file then returns URL)
     """
     return _synthesize_for_session(
         http_request=http_request,
@@ -246,6 +250,49 @@ def generate_speech(http_request: Request, request: SpeechRequest):
         speaker_id=request.speaker_id,
         language=request.language,
         turn_index=request.turn_index,
+    )
+
+
+@app.post("/api/speech/stream")
+async def stream_speech(request: SpeechRequest):
+    """
+    Stream TTS audio in real-time as MP3 chunks.
+    Returns audio chunks as they're generated - no waiting for full file.
+    
+    Frontend uses fetch with streaming to receive and play chunks immediately.
+    Better for real-time playback than waiting for full file generation.
+    """
+    text = (request.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    
+    speaker_id = request.speaker_id or "dr_tewari"
+    language = request.language or "en"
+    
+    async def generate_audio_stream():
+        """Generator that yields raw MP3 audio chunks."""
+        try:
+            async for audio_chunk in stream_speech_audio_chunked(
+                text=text,
+                speaker_id=speaker_id,
+                language=language,
+                chunk_size=8192,  # 8KB chunks for smooth streaming
+            ):
+                yield audio_chunk
+        except Exception as e:
+            # Log error - client will handle disconnection
+            print(f"TTS streaming error: {e}")
+            raise
+    
+    return StreamingResponse(
+        generate_audio_stream(),
+        media_type="audio/mpeg",  # MP3 format
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx/proxy buffering
+            "Transfer-Encoding": "chunked",
+        },
     )
 
 
