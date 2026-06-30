@@ -63,12 +63,13 @@ export async function getHistory(sessionId: string): Promise<HistoryResponse> {
 
 export async function sendMessage(
   message: string,
-  sessionId?: string
+  sessionId?: string,
+  language?: string
 ): Promise<ChatResponse> {
   const res = await fetch(buildApiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, session_id: sessionId ?? null }),
+    body: JSON.stringify({ message, session_id: sessionId ?? null, language: language ?? "en" }),
   });
   const data = await parseJsonResponse<ChatResponse>(res);
   return { ...data, audio_url: buildMediaUrl(data.audio_url) };

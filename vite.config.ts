@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  // GitHub Pages deploys to urology-ai.github.io/digital-chat/
+  base: process.env.NODE_ENV === "production" ? "/digital-chat/" : "/",
   server: {
     port: 5173,
     host: true, // Allow external connections

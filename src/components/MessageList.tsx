@@ -10,9 +10,11 @@ interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
   onSpeak: (message: Message) => void;
+  playVoiceLabel?: string;
+  thinkingLabel?: string;
 }
 
-export function MessageList({ messages, isLoading, onSpeak }: MessageListProps) {
+export function MessageList({ messages, isLoading, onSpeak, playVoiceLabel = "Play voice", thinkingLabel = "Thinking…" }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function MessageList({ messages, isLoading, onSpeak }: MessageListProps) 
                 onClick={() => onSpeak(m)}
                 className="mt-2 text-xs text-sinai-300 hover:text-sinai-200 underline"
               >
-                Play voice
+                {playVoiceLabel}
               </button>
             )}
           </div>
@@ -78,7 +80,7 @@ export function MessageList({ messages, isLoading, onSpeak }: MessageListProps) 
                 strokeDasharray="30 40"
               />
             </svg>
-            <span className="text-sm text-white/70">Thinking...</span>
+            <span className="text-sm text-white/70">{thinkingLabel}</span>
           </div>
         </div>
       )}
