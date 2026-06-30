@@ -4,9 +4,10 @@ interface ChatInputProps {
   onAsk: (question: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  sendLabel?: string;
 }
 
-export function ChatInput({ onAsk, disabled, placeholder = "Ask a question..." }: ChatInputProps) {
+export function ChatInput({ onAsk, disabled, placeholder = "Ask a question...", sendLabel = "Ask" }: ChatInputProps) {
   const [value, setValue] = useState("");
 
   const handleSubmit = (e: FormEvent) => {
@@ -32,7 +33,7 @@ export function ChatInput({ onAsk, disabled, placeholder = "Ask a question..." }
           disabled={disabled || !value.trim()}
           className="px-5 py-3 rounded-xl bg-sinai-400 text-white font-medium hover:bg-sinai-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg hover:shadow-sinai-400/20"
         >
-          Ask
+          {sendLabel}
         </button>
       </div>
     </form>

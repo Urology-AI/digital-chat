@@ -38,13 +38,22 @@ def _candidate_models(primary: str) -> list[str]:
     return candidates
 
 
-def get_chat_response(question: str, history: list[dict]) -> str:
+LANGUAGE_DISPLAY_NAMES: dict[str, str] = {
+    "en": "English", "es": "Spanish", "zh": "Chinese", "hi": "Hindi",
+    "it": "Italian", "fr": "French", "pt": "Portuguese", "pt-BR": "Brazilian Portuguese",
+    "ar": "Arabic", "tr": "Turkish", "ru": "Russian", "mr": "Marathi", "bn": "Bengali",
+}
+
+
+def get_chat_response(question: str, history: list[dict], language: str = "en") -> str:
     """
     Generate educational response with safety guardrails.
     Uses chat history and master prompt from settings.
     """
     settings = get_settings()
-    system_prompt = settings["system_prompt"]
+    lang_name = LANGUAGE_DISPLAY_NAMES.get(language, "English")
+    lang_instruction = f"\n\nIMPORTANT: Always respond in {lang_name} regardless of what language the user writes in."
+    system_prompt = settings["system_prompt"] + lang_instruction
     model = settings["model"]
     temperature = settings["temperature"]
     max_tokens = settings["max_tokens"]

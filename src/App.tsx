@@ -4,10 +4,13 @@ import { ChatInput } from "./components/ChatInput";
 import { DirectTTS } from "./components/DirectTTS";
 import { MessageList } from "./components/MessageList";
 import { Settings } from "./components/Settings";
+import { LanguageSelector } from "./components/LanguageSelector";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
 import { createSession, getHistory, sendMessage, sendSpeech } from "./services/chat";
 import { getSettings, type Settings as AppSettings } from "./services/settings";
 import { buildApiUrl, buildMediaUrl } from "./services/api";
+import { t, TOPIC_CATEGORIES } from "./i18n/index";
+import { useLang } from "./i18n/LanguageContext";
 import type { ClinicianConfig } from "./config/clinician";
 import type { Message } from "./services/chat";
 
@@ -15,8 +18,7 @@ const SESSION_KEY = "chat_session_id";
 
 type AppMode = "chat" | "tts";
 
-const DISCLAIMER =
-  "This tool provides educational information and emotional support. It does not provide medical advice.";
+// DISCLAIMER is now translated at render time via t(lang, "web.disclaimer")
 
 function resolveAvatarUrl(rawUrl?: string): string {
   const fallback = `${import.meta.env.BASE_URL}drtewari.png`;
@@ -28,6 +30,7 @@ function resolveAvatarUrl(rawUrl?: string): string {
 }
 
 function App() {
+  const { lang } = useLang();
   const [mode, setMode] = useState<AppMode>("chat");
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -118,7 +121,7 @@ function App() {
     setMessages((m) => [...m, { role: "user", content: question.trim() }]);
     setIsLoading(true);
     try {
-      const data = await sendMessage(question.trim(), sessionId ?? undefined);
+      const data = await sendMessage(question.trim(), sessionId ?? undefined, lang);
       setSessionId(data.session_id);
       sessionStorage.setItem(SESSION_KEY, data.session_id);
       const response = data.response || data.message || "I'm sorry, I couldn't process that.";
@@ -264,9 +267,10 @@ function App() {
               onClick={handleNewChat}
               className="px-3 py-1.5 rounded-lg text-sm text-white/70 hover:text-white hover:bg-white/10 transition-all"
             >
-              New chat
+              {t(lang, "web.new_chat")}
             </button>
           )}
+          <LanguageSelector />
           <button
             onClick={() => setSettingsOpen(true)}
             className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
@@ -281,7 +285,7 @@ function App() {
       </header>
 
       {/* Avatar-centric immersive layout */}
-      <main className="flex-1 flex flex-col lg:flex-row min-h-screen pt-20 pb-32 lg:pb-24">
+      <main className="flex-1 flex flex-col lg:flex-row min-h-screen pt-20 pb-40 lg:pb-32">
         {/* Avatar stage - full prominence */}
         <section className="flex-1 flex items-center justify-center p-6 lg:p-12">
           <div className="relative">
@@ -308,17 +312,24 @@ function App() {
             {mode === "chat" ? (
               <>
                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                  <MessageList
-                    messages={messages}
-                    isLoading={isLoading}
-                    onSpeak={handleSpeakMessage}
-                  />
+                  {messages.length === 0 && !isLoading ? (
+                    <TopicChips lang={lang} onAsk={handleAsk} />
+                  ) : (
+                    <MessageList
+                      messages={messages}
+                      isLoading={isLoading}
+                      onSpeak={handleSpeakMessage}
+                      playVoiceLabel={t(lang, "web.play_voice")}
+                      thinkingLabel={t(lang, "web.thinking")}
+                    />
+                  )}
                 </div>
                 <div className="p-4 border-t border-white/10 bg-white/5">
                   <ChatInput
                     onAsk={handleAsk}
                     disabled={isLoading}
-                    placeholder="Ask a question..."
+                    placeholder={t(lang, "chat.input.placeholder")}
+                    sendLabel={t(lang, "web.send")}
                   />
                 </div>
               </>
@@ -350,10 +361,61 @@ function App() {
         </section>
       </main>
 
-      {/* Minimal footer */}
-      <footer className="absolute bottom-4 left-0 right-0 text-center">
-        <p className="text-xs text-white/40 max-w-xl mx-auto px-4">{DISCLAIMER}</p>
+      {/* Footer with disclaimer and tool links */}
+      <footer className="absolute bottom-0 left-0 right-0 pb-3 pt-2">
+        <p className="text-xs text-white/40 text-center max-w-xl mx-auto px-4 mb-2">{t(lang, "web.disclaimer")}</p>
+        <div className="flex items-center justify-center gap-4 flex-wrap px-4">
+          <a
+            href="https://epsa.millionstrongmen.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-white/40 hover:text-sinai-400 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            {t(lang, "web.screening_link")}
+          </a>
+          <span className="text-white/20">·</span>
+          <a
+            href="https://as.millionstrongmen.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-white/40 hover:text-sinai-400 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {t(lang, "web.surveillance_link")}
+          </a>
+        </div>
       </footer>
+    </div>
+  );
+}
+
+function TopicChips({ lang, onAsk }: { lang: Parameters<typeof t>[0]; onAsk: (q: string) => void }) {
+  return (
+    <div className="h-full flex flex-col justify-center gap-4 py-2">
+      <p className="text-center text-xs text-white/40 uppercase tracking-wider font-medium">
+        {t(lang, "web.suggested")}
+      </p>
+      {TOPIC_CATEGORIES.map((cat) => (
+        <div key={cat.titleKey}>
+          <p className="text-xs text-white/50 font-medium mb-1.5 px-1">{t(lang, cat.titleKey)}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {cat.questionKeys.map((qk) => (
+              <button
+                key={qk}
+                onClick={() => onAsk(t(lang, qk))}
+                className="text-xs px-3 py-1.5 rounded-full bg-white/8 border border-white/10 text-white/70 hover:text-white hover:bg-sinai-400/20 hover:border-sinai-400/40 transition-all text-left"
+              >
+                {t(lang, qk)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

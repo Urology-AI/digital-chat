@@ -64,6 +64,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
+    language: str | None = "en"
 
 
 class ChatResponse(BaseModel):
@@ -331,7 +332,7 @@ def chat(http_request: Request, request: ChatRequest):
     history = get_history(session_id)
 
     # Get LLM response with full history (uses current master prompt from settings)
-    response = get_chat_response(message, history)
+    response = get_chat_response(message, history, language=request.language or "en")
     speech_result = _synthesize_for_session(
         http_request=http_request,
         text=response,
